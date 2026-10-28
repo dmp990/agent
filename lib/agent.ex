@@ -4,31 +4,35 @@ defmodule Agent.CLI do
   """
 
   alias Agent.Tools
+  alias Agent.LLM
 
   def main(args) do
-    {opts, argv, _errors} =
-      OptionParser.parse(args,
-        switches: [help: :boolean, system: :string],
-        aliases: [h: :help, s: :system]
-      )
+    args
+    |> OptionParser.parse(
+      switches: [help: :boolean, system: :string],
+      aliases: [h: :help, s: :system]
+    )
+    |> run()
+  end
 
-    if opts[:help] do
-      IO.puts("Usage: mix agent [options]")
-      IO.puts("Options:")
-      IO.puts("  --help, -h             Show this help message")
-      IO.puts("  --system, -s <prompt>  Set the system prompt")
-    else
-      system_prompt =
-        case opts[:system] do
-          nil ->
-            @system_prompt
+  defp run({[help: true], _argv, _errors}) do
+    IO.puts("Usage: mix agent [options]")
+    IO.puts("Options:")
+    IO.puts("  --help, -h             Show this help message")
+    IO.puts("  --system, -s <prompt>  Set the system prompt")
+  end
 
-          first_word ->
-            Enum.join([first_word | argv], " ")
-        end
+  defp run({opts, argv, _errors}) do
+    system_prompt =
+      case opts[:system] do
+        nil ->
+          @system_prompt
 
-      loop([%{role: "system", content: system_prompt}])
-    end
+        first_word ->
+          Enum.join([first_word | argv], " ")
+      end
+
+    loop([%{role: "system", content: system_prompt}])
   end
 
   defp loop(chat_history) do
@@ -38,17 +42,18 @@ defmodule Agent.CLI do
         :ok
 
       input ->
-        chat_history = chat_history ++ [%{role: "user", content: input}]
+        case send_to_llm(chat_history ++ [%{role: "user", content: input}]) do
+          {:ok, content, updated_history} ->
+            IO.puts(content)
 
-        response =
-          chat_history
-          |> send_to_llm()
+            updated_history
+            |> debug()
+            |> loop()
 
-        # Continue the loop
-        chat_history
-        |> Kernel.++([%{role: "assistant", content: response}])
-        |> debug()
-        |> loop()
+          {:error, reason} ->
+            IO.puts("Error: #{inspect(reason)}")
+            loop(chat_history)
+        end
     end
   end
 
@@ -60,42 +65,28 @@ defmodule Agent.CLI do
   end
 
   defp send_to_llm(messages) do
-    model_name = Application.get_env(:agent, :model_name)
+    case LLM.chat(messages, Tools.definitions()) do
+      # Tool call
+      {:ok, %{"tool_calls" => [_ | _] = tool_calls} = message} ->
+        # Run each tool
+        new_messages =
+          Enum.map(tool_calls, fn tool_call -> run_tool(tool_call) end)
 
-    {:ok, response} =
-      Req.post("http://localhost:11434/api/chat",
-        json: %{
-          model: model_name,
-          stream: false,
-          messages: messages,
-          tools: Tools.definitions()
-        }
-      )
+        # Recurse!
+        send_to_llm(messages ++ [message | new_messages])
 
-    tools = get_in(response.body, ["message", "tool_calls"]) || []
+      {:ok, %{"content" => content} = message} ->
+        {:ok, content, messages ++ [message]}
 
-    if Enum.any?(tools) do
-      messages_with_call = messages ++ [response.body["message"]]
-
-      # Call tools
-      new_messages =
-        Enum.reduce(tools, messages_with_call, fn tool_call, acc ->
-          tool_id = tool_call["id"]
-          name = tool_call["function"]["name"]
-          args = tool_call["function"]["arguments"]
-
-          IO.puts("Executing tool: #{name}")
-          result = Tools.execute(name, args)
-
-          acc ++ [%{role: "tool", tool_call_id: tool_id, content: to_string(result)}]
-        end)
-
-      # Recurse!
-      send_to_llm(new_messages)
-    else
-      message_content = response.body["message"]["content"]
-      IO.puts(message_content)
-      message_content
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  defp run_tool(%{"id" => id, "function" => %{"name" => name, "arguments" => args}}) do
+    IO.puts("Executing tool: #{name}")
+    result = Tools.execute(name, args)
+
+    %{role: "tool", tool_call_id: id, content: to_string(result)}
   end
 end
