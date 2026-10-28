@@ -1,6 +1,6 @@
 # Agent
 
-This is an Elixir project that demonstrates how to create a simple agent using a language model as its brain. I built this to get more familiar with the Elixir language and functional programming style.
+This is an Elixir project that demonstrates how to create a simple agent using a large language model as its brain. I built this to get more familiar with the Elixir language and functional programming style.
 
 In order to run this project, you will need to have Elixir installed on your machine. You can find installation instructions on the official Elixir website: <https://elixir-lang.org/install.html>
 
