@@ -10,25 +10,24 @@ defmodule Codingagent.CLI do
       IO.puts("Exiting...")
       :ok
     else
-      chat_history = [%{role: "user", content: input} | chat_history]
+      chat_history = chat_history ++ [%{role: "user", content: input}]
 
       response =
         chat_history
-        |> Enum.reverse()
         |> send_to_llm()
 
       # Print the response
       IO.puts(response)
 
       # Continue the loop
-      [%{role: "assistant", content: response} | chat_history]
+      (chat_history ++ [%{role: "assistant", content: response}])
       |> debug()
       |> loop()
     end
   end
 
   defp debug(chat_messages) do
-    File.write!("debug.txt", inspect(Enum.reverse(chat_messages), pretty: true, limit: :infinity))
+    File.write!("debug.txt", inspect(chat_messages, pretty: true, limit: :infinity))
     chat_messages
   end
 
