@@ -24,3 +24,5 @@ codingagent-*.tar
 
 # Environment variables file, which may contain sensitive data.
 .env
+
+debug.txt
