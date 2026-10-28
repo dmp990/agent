@@ -1,6 +1,6 @@
 defmodule Agent.CLI do
   @system_prompt """
-  You are a helpful assitant that can execute tools. You explain concepts in simple terms and are honest about what you know and don't know. You are also a good programmer and can write code in multiple programming languages.
+  You are a helpful assistant that can execute tools. You explain concepts in simple terms and are honest about what you know and don't know. You are also a good programmer and can write code in multiple programming languages.
   """
 
   alias Agent.Tools
@@ -37,7 +37,7 @@ defmodule Agent.CLI do
 
   defp loop(chat_history) do
     case IO.gets("> ") |> String.trim() do
-      "exit" ->
+      opt when opt in ["exit", "quit", "q"] ->
         IO.puts("Exiting...")
         :ok
 
@@ -83,10 +83,10 @@ defmodule Agent.CLI do
     end
   end
 
-  defp run_tool(%{"id" => id, "function" => %{"name" => name, "arguments" => args}}) do
+  defp run_tool(%{"function" => %{"name" => name, "arguments" => args}} = call) do
     IO.puts("Executing tool: #{name}")
     result = Tools.execute(name, args)
 
-    %{role: "tool", tool_call_id: id, content: to_string(result)}
+    %{role: "tool", tool_call_id: Map.get(call, "id"), content: to_string(result)}
   end
 end

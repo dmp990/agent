@@ -48,5 +48,9 @@ defmodule Agent.Tools do
     """
   end
 
+  def execute(tool, args) when tool in ["read_file", "execute_command"] do
+    "Error: Invalid arguments for #{tool}: #{inspect(args)}"
+  end
+
   def execute(unknown_tool, _args), do: "Error: Unknown tool #{unknown_tool}"
 end
