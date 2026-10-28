@@ -1,9 +1,9 @@
-defmodule Codingagent.CLI do
+defmodule Agent.CLI do
   @system_prompt """
   You are an expert software engineer assistant.
   """
 
-  alias Codingagent.Tools
+  alias Agent.Tools
 
   def main(args) do
     {opts, argv, _errors} =
@@ -60,7 +60,7 @@ defmodule Codingagent.CLI do
   end
 
   defp send_to_llm(messages) do
-    model_name = Application.get_env(:codingagent, :model_name)
+    model_name = Application.get_env(:agent, :model_name)
 
     {:ok, response} =
       Req.post("http://localhost:11434/api/chat",

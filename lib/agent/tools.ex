@@ -1,4 +1,4 @@
-defmodule Codingagent.Tools do
+defmodule Agent.Tools do
   def definitions do
     [
       %{

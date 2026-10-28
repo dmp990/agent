@@ -1,9 +1,9 @@
-defmodule Codingagent.MixProject do
+defmodule Agent.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :codingagent,
+      app: :agent,
       version: "0.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
@@ -29,7 +29,7 @@ defmodule Codingagent.MixProject do
 
   defp aliases do
     [
-      agent: ["run -e 'Codingagent.CLI.main(System.argv())' --"]
+      agent: ["run -e 'Agent.CLI.main(System.argv())' --"]
     ]
   end
 end
