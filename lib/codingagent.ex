@@ -1,18 +1,39 @@
-defmodule Codingagent do
-  @moduledoc """
-  Documentation for `Codingagent`.
-  """
+defmodule Codingagent.CLI do
+  def main(_args) do
+    loop()
+  end
 
-  @doc """
-  Hello world.
+  defp loop(chat_history \\ []) do
+    input = IO.gets("> ")
 
-  ## Examples
+    if String.trim(input) == "exit" do
+      IO.puts("Exiting...")
+      :ok
+    else
+      chat_history =
+        [%{role: "user", content: input} | chat_history]
+        |> Enum.reverse()
 
-      iex> Codingagent.hello()
-      :world
+      response =
+        chat_history
+        |> send_to_llm()
 
-  """
-  def hello do
-    :world
+      # Print the response
+      IO.puts(response)
+
+      # Continue the loop
+      [%{role: "assistant", content: response} | chat_history] |> Enum.reverse() |> loop()
+    end
+  end
+
+  defp send_to_llm(messages) do
+    model_name = Application.get_env(:codingagent, :model_name)
+
+    response =
+      Req.post!("http://localhost:11434/api/chat",
+        json: %{model: model_name, stream: false, messages: messages}
+      )
+
+    response.body["message"]["content"]
   end
 end
