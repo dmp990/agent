@@ -69,19 +69,10 @@ defmodule Agent.CLI do
       {:ok, %{"tool_calls" => [_ | _] = tool_calls} = message} ->
         # Run each tool
         new_messages =
-          Enum.reduce(tool_calls, messages ++ [message], fn tool_call, acc ->
-            tool_id = tool_call["id"]
-            name = tool_call["function"]["name"]
-            args = tool_call["function"]["arguments"]
-
-            IO.puts("Executing tool: #{name}")
-            result = Tools.execute(name, args)
-
-            acc ++ [%{role: "tool", tool_call_id: tool_id, content: to_string(result)}]
-          end)
+          Enum.map(tool_calls, fn tool_call -> run_tool(tool_call) end)
 
         # Recurse!
-        send_to_llm(new_messages)
+        send_to_llm(messages ++ [message | new_messages])
 
       {:ok, %{"content" => content} = message} ->
         {:ok, content, messages ++ [message]}
@@ -89,5 +80,12 @@ defmodule Agent.CLI do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  defp run_tool(%{"id" => id, "function" => %{"name" => name, "arguments" => args}}) do
+    IO.puts("Executing tool: #{name}")
+    result = Tools.execute(name, args)
+
+    %{role: "tool", tool_call_id: id, content: to_string(result)}
   end
 end
