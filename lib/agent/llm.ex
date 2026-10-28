@@ -24,8 +24,4 @@ defmodule Agent.LLM do
   end
 
   defp model_name(), do: Application.fetch_env!(:agent, :model_name)
-
-  def send_request(prompt) do
-    {:ok, "Response from LLM for prompt: #{prompt}"}
-  end
 end
