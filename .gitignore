@@ -21,3 +21,6 @@ codingagent-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Environment variables file, which may contain sensitive data.
+.env
