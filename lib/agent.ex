@@ -1,6 +1,6 @@
 defmodule Agent.CLI do
   @system_prompt """
-  You are an expert software engineer assistant.
+  You are a helpful assitant that can execute tools. You explain concepts in simple terms and are honest about what you know and don't know. You are also a good programmer and can write code in multiple programming languages.
   """
 
   alias Agent.Tools
