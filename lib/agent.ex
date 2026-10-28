@@ -4,6 +4,7 @@ defmodule Agent.CLI do
   """
 
   alias Agent.Tools
+  alias Agent.LLM
 
   def main(args) do
     {opts, argv, _errors} =
@@ -40,15 +41,18 @@ defmodule Agent.CLI do
       input ->
         chat_history = chat_history ++ [%{role: "user", content: input}]
 
-        response =
-          chat_history
-          |> send_to_llm()
+        case send_to_llm(chat_history) do
+          {:ok, content, updated_history} ->
+            IO.puts(content)
 
-        # Continue the loop
-        chat_history
-        |> Kernel.++([%{role: "assistant", content: response}])
-        |> debug()
-        |> loop()
+            updated_history
+            |> debug()
+            |> loop()
+
+          {:error, reason} ->
+            IO.puts("Error: #{inspect(reason)}")
+            loop(chat_history)
+        end
     end
   end
 
@@ -60,42 +64,30 @@ defmodule Agent.CLI do
   end
 
   defp send_to_llm(messages) do
-    model_name = Application.get_env(:agent, :model_name)
+    case LLM.chat(messages, Tools.definitions()) do
+      # Tool call
+      {:ok, %{"tool_calls" => [_ | _] = tool_calls} = message} ->
+        # Run each tool
+        new_messages =
+          Enum.reduce(tool_calls, messages ++ [message], fn tool_call, acc ->
+            tool_id = tool_call["id"]
+            name = tool_call["function"]["name"]
+            args = tool_call["function"]["arguments"]
 
-    {:ok, response} =
-      Req.post("http://localhost:11434/api/chat",
-        json: %{
-          model: model_name,
-          stream: false,
-          messages: messages,
-          tools: Tools.definitions()
-        }
-      )
+            IO.puts("Executing tool: #{name}")
+            result = Tools.execute(name, args)
 
-    tools = get_in(response.body, ["message", "tool_calls"]) || []
+            acc ++ [%{role: "tool", tool_call_id: tool_id, content: to_string(result)}]
+          end)
 
-    if Enum.any?(tools) do
-      messages_with_call = messages ++ [response.body["message"]]
+        # Recurse!
+        send_to_llm(new_messages)
 
-      # Call tools
-      new_messages =
-        Enum.reduce(tools, messages_with_call, fn tool_call, acc ->
-          tool_id = tool_call["id"]
-          name = tool_call["function"]["name"]
-          args = tool_call["function"]["arguments"]
+      {:ok, %{"content" => content} = message} ->
+        {:ok, content, messages ++ [message]}
 
-          IO.puts("Executing tool: #{name}")
-          result = Tools.execute(name, args)
-
-          acc ++ [%{role: "tool", tool_call_id: tool_id, content: to_string(result)}]
-        end)
-
-      # Recurse!
-      send_to_llm(new_messages)
-    else
-      message_content = response.body["message"]["content"]
-      IO.puts(message_content)
-      message_content
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 end
