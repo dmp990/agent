@@ -1,25 +1,52 @@
 defmodule Codingagent.CLI do
-  def main(_args) do
-    loop()
+  @system_prompt """
+  You are an expert software engineer assistant.
+  """
+
+  def main(args) do
+    {opts, argv, _errors} =
+      OptionParser.parse(args,
+        switches: [help: :boolean, system: :string],
+        aliases: [h: :help, s: :system]
+      )
+
+    if opts[:help] do
+      IO.puts("Usage: mix agent [options]")
+      IO.puts("Options:")
+      IO.puts("  --help, -h             Show this help message")
+      IO.puts("  --system, -s <prompt>  Set the system prompt")
+    else
+      system_prompt =
+        case opts[:system] do
+          nil ->
+            @system_prompt
+
+          first_word ->
+            Enum.join([first_word | argv], " ")
+        end
+
+      loop([%{role: "system", content: system_prompt}])
+    end
   end
 
-  defp loop(chat_history \\ []) do
-    input = IO.gets("> ")
+  defp loop(chat_history) do
+    case IO.gets("> ") |> String.trim() do
+      "exit" ->
+        IO.puts("Exiting...")
+        :ok
 
-    if String.trim(input) == "exit" do
-      IO.puts("Exiting...")
-      :ok
-    else
-      chat_history = chat_history ++ [%{role: "user", content: input}]
+      input ->
+        chat_history = chat_history ++ [%{role: "user", content: input}]
 
-      response =
+        response =
+          chat_history
+          |> send_to_llm()
+
+        # Continue the loop
         chat_history
-        |> send_to_llm()
-
-      # Continue the loop
-      (chat_history ++ [%{role: "assistant", content: response}])
-      |> debug()
-      |> loop()
+        |> Kernel.++([%{role: "assistant", content: response}])
+        |> debug()
+        |> loop()
     end
   end
 
