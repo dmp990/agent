@@ -1,21 +1,21 @@
-# Codingagent
+# Agent
 
-**TODO: Add description**
+This is an Elixir project that demonstrates how to create a simple agent using a language model as its brain. I built this to get more familiar with the Elixir language and functional programming style.
 
-## Installation
+In order to run this project, you will need to have Elixir installed on your machine. You can find installation instructions on the official Elixir website: <https://elixir-lang.org/install.html>
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `codingagent` to your list of dependencies in `mix.exs`:
+Then `clone` this repository and run the following commands in your terminal:
 
-```elixir
-def deps do
-  [
-    {:codingagent, "~> 0.1.0"}
-  ]
-end
+```bash
+mix deps.get
+mix agent
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/codingagent>.
+## Features
 
+- Interactive CLI chat loop with persistent conversation history (for the duration of the session)
+- Local LLM integration via Ollama
+- Custom system prompt support (`--system` / `-s`)
+- Tool calling with recursive execution:
+  - `read_file`: Read the contents of a file
+  - `execute_command`: Run shell commands on the machine
