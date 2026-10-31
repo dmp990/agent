@@ -72,7 +72,7 @@ defmodule Agent.CLI do
         new_messages =
           Enum.map(tool_calls, fn tool_call -> run_tool(tool_call) end)
 
-        # Recurse!
+        # Recur!
         send_to_llm(messages ++ [message | new_messages])
 
       {:ok, %{"content" => content} = message} ->
